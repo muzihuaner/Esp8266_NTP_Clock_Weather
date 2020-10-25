@@ -58,7 +58,7 @@ DS18B20 ds(D7);
 
 
 时区以及夏令时设置  
-#define TZ              -8       // (utc+) TZ in hours  
+#define TZ              +8       // (utc+) TZ in hours  
 #define DST_MN          0      // use 60mn for summer time in some countries  
 
 第二屏实时天气 第三屏预报的更新频率  
