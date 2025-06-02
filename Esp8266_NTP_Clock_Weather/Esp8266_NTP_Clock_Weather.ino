@@ -54,7 +54,7 @@ See more at https://thingpulse.com
 DS18B20 ds(D7);
 
 
-#define TZ              -8       // (utc+) TZ in hours
+#define TZ              +8       // (utc+) TZ in hours
 #define DST_MN          0      // use 60mn for summer time in some countries
 
 // Setup
@@ -92,8 +92,8 @@ HeFengForeData foreWeather[3];
 #define TZ_SEC          ((TZ)*3600)
 #define DST_SEC         ((DST_MN)*60)
 
-const char* HEFENG_KEY="";
-const char* HEFENG_LOCATION="";
+const char* HEFENG_KEY="你的Key";
+const char* HEFENG_LOCATION="地区编号"; //例如: "CN101020100"为深圳
 time_t now;
 
 // flag changed in the ticker function every 10 minutes

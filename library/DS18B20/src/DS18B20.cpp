@@ -97,6 +97,8 @@ uint8_t DS18B20::getResolution() {
             return 11;
         case RES_12_BIT:
             return 12;
+        default:  // 添加 default 分支
+            return 12;  // 默认返回 12 位分辨率
     }
 }
 
