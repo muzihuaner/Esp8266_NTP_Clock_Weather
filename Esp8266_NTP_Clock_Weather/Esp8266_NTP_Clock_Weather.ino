@@ -94,6 +94,7 @@ HeFengForeData foreWeather[3];
 
 const char* HEFENG_KEY="你的Key";
 const char* HEFENG_LOCATION="地区编号"; //例如: "CN101020100"为深圳
+
 time_t now;
 
 // flag changed in the ticker function every 10 minutes
@@ -329,7 +330,7 @@ void setup() {
   ui.init();
 
   Serial.println("");
-  configTime(TZ_SEC, DST_SEC, "pool.ntp.org","0.cn.pool.ntp.org","1.cn.pool.ntp.org");
+  configTime(TZ_SEC, DST_SEC, "ntp.ntsc.ac.cn","ntp.aliyun.com","ntp.tuna.tsinghua.edu.cn");
   updateData(&display);
 
 }
