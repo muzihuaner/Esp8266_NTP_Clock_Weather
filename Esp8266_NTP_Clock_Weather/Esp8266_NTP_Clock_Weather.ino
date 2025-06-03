@@ -95,6 +95,12 @@ HeFengForeData foreWeather[3];
 const char* HEFENG_KEY="你的Key";
 const char* HEFENG_LOCATION="地区编号"; //例如: "CN101020100"为深圳
 
+// 默认WiFi配置
+const char* DEFAULT_SSID = "默认WiFi名称";  // 替换为您的默认WiFi名称
+const char* DEFAULT_PASSWORD = "默认WiFi密码";  // 替换为您的默认WiFi密码
+const int WIFI_CONNECT_TIMEOUT = 10000; // 10秒超时
+const int MAX_RETRY = 1; // 最大重试次数
+
 time_t now;
 
 // flag changed in the ticker function every 10 minutes
@@ -132,33 +138,72 @@ int numberOfOverlays = 1;
 bool autoConfig()
 {
   WiFi.mode(WIFI_STA);
+  
+  // 尝试使用默认配置连接
+  Serial.println("Trying to connect with default WiFi settings...");
+  WiFi.begin(DEFAULT_SSID, DEFAULT_PASSWORD);
+  
+  int retryCount = 0;
+  while (retryCount <= MAX_RETRY) {
+    int counter = 0;
+    unsigned long startTime = millis();
+    
+    while (millis() - startTime < WIFI_CONNECT_TIMEOUT) {
+      if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("Connected to default WiFi successfully!");
+        Serial.printf("SSID:%s\r\n", WiFi.SSID().c_str());
+        WiFi.printDiag(Serial);
+        return true;
+      }
+      
+      delay(500);
+      Serial.print(".");
+      display.clear();
+      display.drawString(64, 10, "Connecting to WiFi");
+      if (retryCount > 0) {
+        display.drawString(64, 20, "Retry: " + String(retryCount) + "/" + String(MAX_RETRY));
+      }
+      display.drawXbm(46, 30, 8, 8, counter % 3 == 0 ? activeSymbole : inactiveSymbole);
+      display.drawXbm(60, 30, 8, 8, counter % 3 == 1 ? activeSymbole : inactiveSymbole);
+      display.drawXbm(74, 30, 8, 8, counter % 3 == 2 ? activeSymbole : inactiveSymbole);
+      display.display();
+      counter++;
+    }
+    
+    retryCount++;
+    if (retryCount <= MAX_RETRY) {
+      Serial.println("\nRetrying connection...");
+      WiFi.disconnect();
+      delay(1000);
+      WiFi.begin(DEFAULT_SSID, DEFAULT_PASSWORD);
+    }
+  }
+  
+  Serial.println("\nDefault WiFi connection failed, trying saved credentials...");
+  // 尝试使用保存的配置
   WiFi.begin();
-  Serial.print("AutoConfig Waiting......");
-   int counter = 0;
-  for (int i = 0; i < 20; i++)
-  {
-    if (WiFi.status() == WL_CONNECTED)
-    {
-      Serial.println("AutoConfig Success");
+  unsigned long startTime = millis();
+  int counter = 0;
+  
+  while (millis() - startTime < 10000) { // 给保存的配置10秒时间尝试
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Connected with saved credentials!");
       Serial.printf("SSID:%s\r\n", WiFi.SSID().c_str());
-      Serial.printf("PSW:%s\r\n", WiFi.psk().c_str());
       WiFi.printDiag(Serial);
       return true;
     }
-    else
-    {
-       delay(500);
+    delay(500);
     Serial.print(".");
     display.clear();
-    display.drawString(64, 10, "Connecting to WiFi");
+    display.drawString(64, 10, "Trying saved WiFi");
     display.drawXbm(46, 30, 8, 8, counter % 3 == 0 ? activeSymbole : inactiveSymbole);
     display.drawXbm(60, 30, 8, 8, counter % 3 == 1 ? activeSymbole : inactiveSymbole);
     display.drawXbm(74, 30, 8, 8, counter % 3 == 2 ? activeSymbole : inactiveSymbole);
-    display.display(); 
-     counter++; 
-    }
+    display.display();
+    counter++;
   }
-  Serial.println("AutoConfig Faild!" );
+  
+  Serial.println("\nAll automatic connection attempts failed!");
   return false;
 }
 
@@ -479,3 +524,5 @@ void setReadyForWeatherUpdate() {
   Serial.println("Setting readyForUpdate to true");
   readyForWeatherUpdate = true;
 }
+
+
