@@ -92,16 +92,17 @@ HeFengForeData foreWeather[3];
 #define TZ_SEC          ((TZ)*3600)
 #define DST_SEC         ((DST_MN)*60)
 
-const char* HEFENG_KEY="你的Key";
-const char* HEFENG_LOCATION="地区编号"; //例如: "CN101020100"为深圳
+const char* HEFENG_KEY="KEY";
+const char* HEFENG_LOCATION="101020100"; //例如: "CN101020100"为深圳
 
 // 默认WiFi配置
-const char* DEFAULT_SSID = "默认WiFi名称";  // 替换为您的默认WiFi名称
-const char* DEFAULT_PASSWORD = "默认WiFi密码";  // 替换为您的默认WiFi密码
+const char* DEFAULT_SSID = "HUANWIFI";  // 替换为您的默认WiFi名称
+const char* DEFAULT_PASSWORD = "88888888";  // 替换为您的默认WiFi密码
 const int WIFI_CONNECT_TIMEOUT = 10000; // 10秒超时
 const int MAX_RETRY = 1; // 最大重试次数
 
 time_t now;
+bool ntpSynced = false;  // 添加 NTP 同步状态标志
 
 // flag changed in the ticker function every 10 minutes
 bool readyForWeatherUpdate = false;
@@ -375,9 +376,8 @@ void setup() {
   ui.init();
 
   Serial.println("");
-  configTime(TZ_SEC, DST_SEC, "ntp.ntsc.ac.cn","ntp.aliyun.com","ntp.tuna.tsinghua.edu.cn");
+  ntpSyncTime();
   updateData(&display);
-
 }
 
 void loop() {
@@ -523,6 +523,61 @@ void drawHeaderOverlay(OLEDDisplay *display, OLEDDisplayUiState* state) {
 void setReadyForWeatherUpdate() {
   Serial.println("Setting readyForUpdate to true");
   readyForWeatherUpdate = true;
+}
+
+// NTP同步时间函数
+void ntpSyncTime() {
+  ntpSynced = false;
+  // 支持多个NTP服务器
+  const char* ntpServers[] = {"ntp.ntsc.ac.cn", "ntp1.aliyun.com", "ntp2.aliyun.com", "ntp3.aliyun.com", "pool.ntp.org"};
+  const int serverCount = sizeof(ntpServers) / sizeof(ntpServers[0]);
+  configTime(TZ_SEC, DST_SEC, ntpServers[0], ntpServers[1], ntpServers[2]);
+
+  Serial.println("正在等待 NTP 时间同步...");
+  display.clear();
+  display.drawString(64, 10, "等待NTP同步...");
+  display.display();
+
+  int retryCount = 0;
+  const int maxRetries = 10;
+  const int waitTimePerTry = 2000;
+  while (!ntpSynced && retryCount < maxRetries) {
+    time_t now = time(nullptr);
+    if (now > 1577836800) { // 2020-01-01
+      ntpSynced = true;
+      Serial.println("NTP 时间同步成功！");
+      struct tm timeinfo;
+      localtime_r(&now, &timeinfo);
+      Serial.printf("当前时间: %d-%02d-%02d %02d:%02d:%02d\n",
+        timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
+        timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+      display.clear();
+      display.drawString(64, 10, "NTP同步成功！");
+      display.display();
+      delay(1000);
+    } else {
+      retryCount++;
+      Serial.printf("NTP同步尝试 %d/%d...\n", retryCount, maxRetries);
+      display.clear();
+      display.drawString(64, 10, "NTP同步重试中...");
+      display.drawString(64, 25, String(retryCount) + "/" + String(maxRetries));
+      display.display();
+      // 超过一半重试后，切换备用服务器
+      if (retryCount == maxRetries / 2 && serverCount > 3) {
+        configTime(TZ_SEC, DST_SEC, ntpServers[3], ntpServers[4]);
+        Serial.println("切换备用NTP服务器...");
+      }
+      delay(waitTimePerTry);
+    }
+  }
+  if (!ntpSynced) {
+    Serial.println("NTP 时间同步失败！");
+    display.clear();
+    display.drawString(64, 10, "NTP同步失败！");
+    display.drawString(64, 25, "请检查网络");
+    display.display();
+    delay(2000);
+  }
 }
 
 
