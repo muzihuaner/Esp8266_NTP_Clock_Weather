@@ -59,8 +59,8 @@ DS18B20 ds(D7);
 #define DST_MN          0      // use 60mn for summer time in some countries
 
 // Default WiFi Configuration (set to empty to skip default WiFi)
-#define DEFAULT_WIFI_SSID "WIFINAME"
-#define DEFAULT_WIFI_PASSWORD "WIFIPASSWORD"
+#define DEFAULT_WIFI_SSID "HUANWIFI"
+#define DEFAULT_WIFI_PASSWORD "asdfghjkl..."
 
 // Setup
 const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes  online weather
@@ -97,8 +97,8 @@ HeFengForeData foreWeather[3];
 #define TZ_SEC          ((TZ)*3600)
 #define DST_SEC         ((DST_MN)*60)
 
-const char* HEFENG_KEY="KEY";   
-const char* HEFENG_LOCATION="CityID";  
+const char* HEFENG_KEY="46c395471964452e8a4772c16932f945";
+const char* HEFENG_LOCATION="101100202"; //例如: "CN101020100"为深圳
 
 time_t now;
 
@@ -155,6 +155,12 @@ bool autoConfig()
       }
       delay(500);
       Serial.print(".");
+      display.clear();
+      display.drawString(64, 10, "Connecting to default WiFi");
+      display.drawXbm(46, 30, 8, 8, i % 3 == 0 ? activeSymbole : inactiveSymbole);
+      display.drawXbm(60, 30, 8, 8, i % 3 == 1 ? activeSymbole : inactiveSymbole);
+      display.drawXbm(74, 30, 8, 8, i % 3 == 2 ? activeSymbole : inactiveSymbole);
+      display.display();
     }
     if (connected) {
       return true;
