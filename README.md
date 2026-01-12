@@ -54,7 +54,7 @@ OneWire库      用于连接DS18B20
 #define DEFAULT_WIFI_PASSWORD "WIFIPASSWORD"
 ```
 
-已改为HTML配网 连接ESP8266建立的wifi 访问http://192.168.4.1 即可配网  
+如果连接不上，进行HTML配网 连接ESP8266建立的wifi 访问http://192.168.4.1 即可配网  
 
 DS18B20 数据端(中间角) 连接的位置  
 
