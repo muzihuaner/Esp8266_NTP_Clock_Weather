@@ -36,6 +36,7 @@ See more at https://thingpulse.com
 #include <time.h>                       // time() ctime()
 #include <sys/time.h>                   // struct timeval
 #include <coredecls.h>                  // settimeofday_cb()
+#include <cstring>
 
 
 #include "SH1106Wire.h"//or #include "SSD1306Wire.h"
@@ -56,6 +57,10 @@ DS18B20 ds(D7);
 
 #define TZ              +8       // (utc+) TZ in hours
 #define DST_MN          0      // use 60mn for summer time in some countries
+
+// Default WiFi Configuration (set to empty to skip default WiFi)
+#define DEFAULT_WIFI_SSID "WIFINAME"
+#define DEFAULT_WIFI_PASSWORD "WIFIPASSWORD"
 
 // Setup
 const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes  online weather
@@ -92,8 +97,8 @@ HeFengForeData foreWeather[3];
 #define TZ_SEC          ((TZ)*3600)
 #define DST_SEC         ((DST_MN)*60)
 
-const char* HEFENG_KEY="你的Key";
-const char* HEFENG_LOCATION="地区编号"; //例如: "CN101020100"为深圳
+const char* HEFENG_KEY="KEY";   
+const char* HEFENG_LOCATION="CityID";  
 
 time_t now;
 
@@ -132,14 +137,37 @@ int numberOfOverlays = 1;
 bool autoConfig()
 {
   WiFi.mode(WIFI_STA);
+  
+  bool connected = false;
+  
+  if (strlen(DEFAULT_WIFI_SSID) > 0) {
+    Serial.println("Trying default WiFi configuration...");
+    WiFi.begin(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASSWORD);
+    for (int i = 0; i < 20; i++)
+    {
+      if (WiFi.status() == WL_CONNECTED)
+      {
+        Serial.println("Default WiFi Connected");
+        Serial.printf("SSID:%s\r\n", WiFi.SSID().c_str());
+        WiFi.printDiag(Serial);
+        connected = true;
+        break;
+      }
+      delay(500);
+      Serial.print(".");
+    }
+    if (connected) {
+      return true;
+    }
+  }
+  
+  Serial.println("Trying saved WiFi configuration...");
   WiFi.begin();
-  Serial.print("AutoConfig Waiting......");
-   int counter = 0;
   for (int i = 0; i < 20; i++)
   {
     if (WiFi.status() == WL_CONNECTED)
     {
-      Serial.println("AutoConfig Success");
+      Serial.println("Saved WiFi Connected");
       Serial.printf("SSID:%s\r\n", WiFi.SSID().c_str());
       Serial.printf("PSW:%s\r\n", WiFi.psk().c_str());
       WiFi.printDiag(Serial);
@@ -147,18 +175,17 @@ bool autoConfig()
     }
     else
     {
-       delay(500);
-    Serial.print(".");
-    display.clear();
-    display.drawString(64, 10, "Connecting to WiFi");
-    display.drawXbm(46, 30, 8, 8, counter % 3 == 0 ? activeSymbole : inactiveSymbole);
-    display.drawXbm(60, 30, 8, 8, counter % 3 == 1 ? activeSymbole : inactiveSymbole);
-    display.drawXbm(74, 30, 8, 8, counter % 3 == 2 ? activeSymbole : inactiveSymbole);
-    display.display(); 
-     counter++; 
+        delay(500);
+        Serial.print(".");
+        display.clear();
+        display.drawString(64, 10, "Connecting to WiFi");
+        display.drawXbm(46, 30, 8, 8, i % 3 == 0 ? activeSymbole : inactiveSymbole);
+        display.drawXbm(60, 30, 8, 8, i % 3 == 1 ? activeSymbole : inactiveSymbole);
+        display.drawXbm(74, 30, 8, 8, i % 3 == 2 ? activeSymbole : inactiveSymbole);
+        display.display(); 
     }
   }
-  Serial.println("AutoConfig Faild!" );
+  Serial.println("AutoConfig Failed!" );
   return false;
 }
 

@@ -47,51 +47,75 @@ OneWire库      用于连接DS18B20
 
 ## 程序  
 需要修改的地方：  
-~~你的wifissid 密码
-// WIFI  
-const char* WIFI_SSID = "";  
-const char* WIFI_PWD = "";~~
+
+```
+// Default WiFi Configuration (set to empty to skip default WiFi)
+#define DEFAULT_WIFI_SSID "WIFINAME"
+#define DEFAULT_WIFI_PASSWORD "WIFIPASSWORD"
+```
+
 已改为HTML配网 连接ESP8266建立的wifi 访问http://192.168.4.1 即可配网  
 
 DS18B20 数据端(中间角) 连接的位置  
-DS18B20 ds(D7);  
 
+```
+DS18B20 ds(D7);  
+```
 
 时区以及夏令时设置  
+
+```
 #define TZ              +8       // (utc+) TZ in hours  
 #define DST_MN          0      // use 60mn for summer time in some countries  
+```
 
 第二屏实时天气 第三屏预报的更新频率  
-const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes  online weather  
+
+```
+const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes  online weather 
+```
+
+
 DS18B20更新频率  
+
+```
 const int UPDATE_CURR_INTERVAL_SECS = 10; // Update every 10 secs DS18B20  
+
+```
+
 OLED地址以及管脚信息  
+
+```
 const int I2C_DISPLAY_ADDRESS = 0x3c;  
 #if defined(ESP8266)  
 const int SDA_PIN = D2;  
 const int SDC_PIN = D5;  
 #endif  
+```
 
-和风天气KEY 城市ID 自行去https://dev.heweather.com/ 注册  城市代码查询https://github.com/qwd/LocationList   
+和风天气KEY 城市ID 自行去https://dev.heweather.com/ 注册  
+
+城市代码查询https://github.com/qwd/LocationList   
+
+```
 const char* HEFENG_KEY="";   
 const char* HEFENG_LOCATION="";  
+```
 
 OLED屏幕一般有两种驱动SSD1306和SH1106  
 根据你买的屏幕 更改如下两行的信息 用错了会花屏  
+
+```
 #include "SH1106Wire.h"//or #include "SSD1306Wire.h"  
 SH1106Wire     display(I2C_DISPLAY_ADDRESS, SDA_PIN, SDC_PIN);   // or SSD1306Wire  display(I2C_DISPLAY_ADDRESS, SDA_PIN, SDC_PIN);  
+```
 
 ## 其他
 和风天气目前免费版API提供了实时天气 天气预报 市级的空气质量等 可用的信息很多 如果你想显示其他信息 请查看API https://dev.heweather.com/docs/api/ 并更改HeFeng.app HeFeng.h中的结构体以及JSON解析信息  
 如果你想用其他网站的API 请自行修改HeFeng.app HeFeng.h
 
 ## 改进
-
-用这个128*64的oled屏幕尺寸一般为0.96或1.3英寸 如果喜欢大尺寸 可以将屏幕换成max7219点阵, 改下程序的显示部分就可以 我的LED点阵时钟项目https://github.com/yuan910715/Esp8266_Wifi_Matrix_Clock  
-（已完成）目前连接的wifi的ssid/pass是写死在程序里 烧录进开发板的 如果要改的话就需要重新烧录  
-后续有时间的话我会让esp8266建一个webServer 写一个网页用于配置wifi信息 若没连上wifi就建立一个AP 手机连上访问webServer就能配置了。
-
-## 更新 
-更改代码为和风天气V7版本 修复bug  
-接口默认返回的数据是Gzip压缩的，直接解析返回结果会乱码  
-加入Gzip处理  
+- 更改代码为和风天气V7版本 修复bug  
+- 接口默认返回的数据是Gzip压缩的，直接解析返回结果会乱码  
+- 加入Gzip处理  
+- 支持配置默认WIFI
