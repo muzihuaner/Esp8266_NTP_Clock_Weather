@@ -59,8 +59,8 @@ DS18B20 ds(D7);
 #define DST_MN          0      // use 60mn for summer time in some countries
 
 // Default WiFi Configuration (set to empty to skip default WiFi)
-#define DEFAULT_WIFI_SSID "HUANWIFI"
-#define DEFAULT_WIFI_PASSWORD "asdfghjkl..."
+#define DEFAULT_WIFI_SSID "WIFI-SSID"
+#define DEFAULT_WIFI_PASSWORD "WiFi-Password"
 
 // Setup
 const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes  online weather
@@ -97,8 +97,8 @@ HeFengForeData foreWeather[3];
 #define TZ_SEC          ((TZ)*3600)
 #define DST_SEC         ((DST_MN)*60)
 
-const char* HEFENG_KEY="46c395471964452e8a4772c16932f945";
-const char* HEFENG_LOCATION="101100202"; //例如: "CN101020100"为深圳
+const char* HEFENG_KEY="HeFeng-Key";
+const char* HEFENG_LOCATION="HeFeng-Location"; //例如: "101020100"为上海
 
 time_t now;
 
