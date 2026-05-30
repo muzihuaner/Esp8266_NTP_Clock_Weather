@@ -3,30 +3,26 @@
 #include <ArduinoJson.h>
 
 typedef struct HeFengCurrentData {
-
   String cond_txt;
   String fl;
   String tmp;
   String hum;
   String wind_sc;
   String iconMeteoCon;
-  String follower;
-}
-HeFengCurrentData;
+} HeFengCurrentData;
+
 typedef struct HeFengForeData {
   String datestr;
   String tmp_min;
   String tmp_max;
   String iconMeteoCon;
+} HeFengForeData;
 
-}
-HeFengForeData;
 class HeFeng {
   private:
-    String getMeteoconIcon(String cond_code);
+    static const char* getMeteoconIcon(const String& cond_code);
   public:
     HeFeng();
-    void doUpdateCurr(HeFengCurrentData *data, String key, String location);
-    void doUpdateFore(HeFengForeData *data, String key, String location);
-    void fans(HeFengCurrentData *data, String id);
+    void doUpdateCurr(HeFengCurrentData *data, const String& key, const String& location);
+    void doUpdateFore(HeFengForeData *data, const String& key, const String& location);
 };

@@ -6,61 +6,109 @@
 #include "HttpsGetUtils.h"
 
 HeFeng::HeFeng() {
-
 }
 
+// 天气代码到 Meteocon 图标的查找表
+// 使用结构体数组替代长 if-else 链，更高效且易维护
+struct WeatherIconMapping {
+  const char* codes[6]; // 每个映射最多支持6个天气代码，末尾为空
+  char icon;
+};
 
+static const WeatherIconMapping iconTable[] = {
+  {{"100", "9006", ""},           'B'}, // 晴
+  {{"999", ""},                   ')'}, // 未知
+  {{"104", ""},                   'D'}, // 阴
+  {{"500", ""},                   'E'}, // 霾
+  {{"503", "504", "507", "508", ""}, 'F'}, // 浮尘/扬沙
+  {{"499", "901", ""},            'G'}, // 雾
+  {{"103", ""},                   'H'}, // 多云
+  {{"502", "511", "512", "513", ""}, 'L'}, // 烟霾
+  {{"501", "509", "510", "514", "515", ""}, 'M'}, // 雾霾
+  {{"102", ""},                   'N'}, // 少云
+  {{"213", ""},                   'O'}, // 沙尘暴
+  {{"302", "303", ""},            'P'}, // 雷阵雨
+  {{"305", "308", "309", "314", "399", ""}, 'Q'}, // 阵雨
+  {{"306", "307", "310", "311", "312", "315"}, 'R'}, // 暴雨
+  {{"316", "317", "318", ""},     'R'}, // 暴雨（续）
+  {{"200", "201", "202", "203", "204", ""}, 'S'}, // 雷暴
+  {{"205", "206", "207", "208", "209", ""}, 'S'}, // 雷暴（续）
+  {{"210", "211", "212", ""},     'S'}, // 雷暴（续）
+  {{"300", "301", ""},            'T'}, // 小雨
+  {{"400", "408", ""},            'U'}, // 小雪
+  {{"407", ""},                   'V'}, // 阵雪
+  {{"401", "402", "403", ""},     'W'}, // 中雪/大雪
+  {{"409", "410", ""},            'W'}, // 大雪（续）
+  {{"304", "313", "404", "405", "406", ""}, 'X'}, // 冻雨/雨夹雪
+  {{"101", ""},                   'Y'}, // 阴转多云
+};
 
+static const int ICON_TABLE_SIZE = sizeof(iconTable) / sizeof(iconTable[0]);
 
-void HeFeng::doUpdateCurr(HeFengCurrentData *data, String key,
-                          String location) {  // 获取天气
+const char* HeFeng::getMeteoconIcon(const String& cond_code) {
+  for (int t = 0; t < ICON_TABLE_SIZE; t++) {
+    for (int c = 0; c < 6; c++) {
+      if (iconTable[t].codes[c][0] == '\0') break; // 到达末尾
+      if (cond_code == iconTable[t].codes[c]) {
+        // 返回指向静态字符串的指针，无需额外分配
+        static char iconStr[2] = {0, 0};
+        iconStr[0] = iconTable[t].icon;
+        return iconStr;
+      }
+    }
+  }
+  return ")"; // 默认未知图标
+}
+
+void HeFeng::doUpdateCurr(HeFengCurrentData *data, const String& key,
+                          const String& location) {  // 获取天气
 
   std::unique_ptr<BearSSL::WiFiClientSecure> client(
       new BearSSL::WiFiClientSecure);
   client->setInsecure();
-  String url = "https://devapi.qweather.com/v7/weather/now?lang=en&location=" +
+
+  String url = "https://devapi.qweather.com/v7/weather/now?lang=zh&location=" +
                location + "&key=" + key;
-  Serial.printf("[HTTPS] doUpdateCurr begin...now url:%s\n", url.c_str());
+  Serial.printf("[HTTPS] doUpdateCurr begin... url:%s\n", url.c_str());
+
   uint8_t *outbuf = NULL;
   size_t len = 0;
   bool result = HttpsGetUtils::getString(url.c_str(), outbuf, len);
-  Serial.printf("result=%d, len=%d", result, len);
+  Serial.printf("result=%d, len=%d\n", result, len);
+
   if (outbuf && len) {
-    Serial.printf("write to serial, buf=%x, len=%d\n", outbuf, len);
-    // Serial.write(outbuf, len);
     Serial.println("parse json");
-    DynamicJsonDocument doc(768);
+    DynamicJsonDocument doc(1024);
     DeserializationError error = deserializeJson(doc, (char *)outbuf, len);
+    
+    // 解析完成后立即释放 outbuf，防止内存泄漏
+    free(outbuf);
+    outbuf = NULL;
+
     if (error) {
       Serial.print(F("deserializeJson() failed: "));
       Serial.println(error.f_str());
       return;
     }
-    String httpCode = doc["code"].as<String>();  // "200"
+    
+    const char* httpCode = doc["code"];
+    Serial.println("doUpdateCurr httpCode:");
+    Serial.println(httpCode);
 
-    Serial.println("doUpdateCurr httpCode:" + httpCode);
+    if (strcmp(httpCode, "200") == 0) {
+      data->tmp = doc["now"]["temp"].as<String>();
+      data->fl = doc["now"]["feelsLike"].as<String>();
+      data->hum = doc["now"]["humidity"].as<String>();
+      data->wind_sc = doc["now"]["windScale"].as<String>();
+      String cond_code = doc["now"]["icon"].as<String>();
+      data->cond_txt = doc["now"]["text"].as<String>();
+      data->iconMeteoCon = getMeteoconIcon(cond_code);
 
-    // httpCode will be negative on error
-    if (httpCode == "200") {
-      String tmp = doc["now"]["temp"];
-      data->tmp = tmp;
-      String fl = doc["now"]["feelsLike"];
-      data->fl = fl;
-      String hum = doc["now"]["humidity"];
-      data->hum = hum;
-      String wind_sc = doc["now"]["windScale"];
-      data->wind_sc = wind_sc;
-      String cond_code = doc["now"]["icon"];
-      String meteoconIcon = getMeteoconIcon(cond_code);
-      String cond_txt = doc["now"]["text"];
-      data->cond_txt = cond_txt;
-      data->iconMeteoCon = meteoconIcon;
       Serial.printf("[HTTPS] doUpdateCurr tmp:%s, fl:%s, hum:%s, wind_sc:%s\n",
-                    tmp.c_str(), fl.c_str(), hum.c_str(), wind_sc.c_str());
+                    data->tmp.c_str(), data->fl.c_str(), data->hum.c_str(), data->wind_sc.c_str());
 
     } else {
-      Serial.printf("[HTTPS] GET... failed, error: %s\n",
-                    httpCode.c_str());
+      Serial.printf("[HTTPS] GET failed, error code: %s\n", httpCode);
       data->tmp = "-1";
       data->fl = "-1";
       data->hum = "-1";
@@ -79,59 +127,60 @@ void HeFeng::doUpdateCurr(HeFengCurrentData *data, String key,
   }
 }
 
-void HeFeng::doUpdateFore(HeFengForeData *data, String key,
-                          String location) {  // 获取预报
+void HeFeng::doUpdateFore(HeFengForeData *data, const String& key,
+                          const String& location) {  // 获取预报
 
   std::unique_ptr<BearSSL::WiFiClientSecure> client(
       new BearSSL::WiFiClientSecure);
   client->setInsecure();
+
   String url =
-      "https://devapi.qweather.com/v7/weather/3d?lang=en&location=" + location +
+      "https://devapi.qweather.com/v7/weather/3d?lang=zh&location=" + location +
       "&key=" + key;
-  Serial.printf("[HTTPS] begin...forecast url:%s\n", url.c_str());
+  Serial.printf("[HTTPS] doUpdateFore begin... url:%s\n", url.c_str());
+
   uint8_t *outbuf = NULL;
   size_t len = 0;
   bool result = HttpsGetUtils::getString(url.c_str(), outbuf, len);
-  Serial.printf("result=%d, len=%d", result, len);
+  Serial.printf("result=%d, len=%d\n", result, len);
+
   if (outbuf && len) {
-    Serial.printf("write to serial, buf=%x, len=%d\n", outbuf, len);
-    // Serial.write(outbuf, len);
     Serial.println("doUpdateFore parse json");
     DynamicJsonDocument doc(3072);
     DeserializationError error = deserializeJson(doc, (char *)outbuf, len);
+    
+    // 解析完成后立即释放 outbuf，防止内存泄漏
+    free(outbuf);
+    outbuf = NULL;
+
     if (error) {
       Serial.print(F("deserializeJson() failed: "));
       Serial.println(error.f_str());
       return;
     }
-    String httpCode = doc["code"].as<String>();  // "200"
+    
+    const char* httpCode = doc["code"];
+    Serial.println("doUpdateFore httpCode:");
+    Serial.println(httpCode);
 
-    Serial.println("doUpdateFore httpCode:" + httpCode);
-
-    // httpCode will be negative on error
-    if (httpCode == "200") {
+    if (strcmp(httpCode, "200") == 0) {
       JsonObject root = doc.as<JsonObject>();
-      int i;
-      for (i = 0; i < 3; i++) {
-        String tmp_min = root["daily"][i]["tempMin"];
-        data[i].tmp_min = tmp_min;
-        String tmp_max = root["daily"][i]["tempMax"];
-        data[i].tmp_max = tmp_max;
-        String datestr = root["daily"][i]["fxDate"];
+      for (int i = 0; i < 3; i++) {
+        data[i].tmp_min = root["daily"][i]["tempMin"].as<String>();
+        data[i].tmp_max = root["daily"][i]["tempMax"].as<String>();
+        String datestr = root["daily"][i]["fxDate"].as<String>();
         data[i].datestr = datestr.substring(5, datestr.length());
-        String cond_code = root["daily"][i]["iconDay"];
-        String meteoconIcon = getMeteoconIcon(cond_code);
-        data[i].iconMeteoCon = meteoconIcon;
+        String cond_code = root["daily"][i]["iconDay"].as<String>();
+        data[i].iconMeteoCon = getMeteoconIcon(cond_code);
+
         Serial.printf(
-            "[HTTPS] doUpdateCurr tmp_min:%s, "
-            "tmp_max:%s, datestr:%s, cond_code:%s\n",
-            tmp_min.c_str(), tmp_max.c_str(), datestr.c_str(),
+            "[HTTPS] doUpdateFore tmp_min:%s, tmp_max:%s, datestr:%s, cond_code:%s\n",
+            data[i].tmp_min.c_str(), data[i].tmp_max.c_str(), data[i].datestr.c_str(),
             cond_code.c_str());
       }
     } else {
-      Serial.printf("[HTTPS] GET... failed, error: %s\n", httpCode);
-      int i;
-      for (i = 0; i < 3; i++) {
+      Serial.printf("[HTTPS] GET failed, error code: %s\n", httpCode);
+      for (int i = 0; i < 3; i++) {
         data[i].tmp_min = "-1";
         data[i].tmp_max = "-1";
         data[i].datestr = "N/A";
@@ -140,8 +189,7 @@ void HeFeng::doUpdateFore(HeFengForeData *data, String key,
     }
   } else {
     Serial.printf("[HTTPS] doUpdateFore Unable to connect\n");
-    int i;
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
       data[i].tmp_min = "-1";
       data[i].tmp_max = "-1";
       data[i].datestr = "N/A";
@@ -149,29 +197,3 @@ void HeFeng::doUpdateFore(HeFengForeData *data, String key,
     }
   }
 }
-
-   String HeFeng::getMeteoconIcon(String cond_code){
-    if(cond_code=="100"||cond_code=="9006"){return "B";}
-    if(cond_code=="999"){return ")";}
-    if(cond_code=="104"){return "D";}
-     if(cond_code=="500"){return "E";}
-      if(cond_code=="503"||cond_code=="504"||cond_code=="507"||cond_code=="508"){return "F";}
-       if(cond_code=="499"||cond_code=="901"){return "G";}
-        if(cond_code=="103"){return "H";}
-         if(cond_code=="502"||cond_code=="511"||cond_code=="512"||cond_code=="513"){return "L";}
-          if(cond_code=="501"||cond_code=="509"||cond_code=="510"||cond_code=="514"||cond_code=="515"){return "M";}
-           if(cond_code=="102"){return "N";}
-            if(cond_code=="213"){return "O";}
-               if(cond_code=="302"||cond_code=="303"){return "P";}
-                  if(cond_code=="305"||cond_code=="308"||cond_code=="309"||cond_code=="314"||cond_code=="399"){return "Q";}
-                         if(cond_code=="306"||cond_code=="307"||cond_code=="310"||cond_code=="311"||cond_code=="312"||cond_code=="315"||cond_code=="316"||cond_code=="317"||cond_code=="318"){return "R";}
-                         if(cond_code=="200"||cond_code=="201"||cond_code=="202"||cond_code=="203"||cond_code=="204"||cond_code=="205"||cond_code=="206"||cond_code=="207"||cond_code=="208"||cond_code=="209"||cond_code=="210"||cond_code=="211"||cond_code=="212"){return "S";}
-                             if(cond_code=="300"||cond_code=="301"){return "T";}
-                                 if(cond_code=="400"||cond_code=="408"){return "U";}
-                           if(cond_code=="407"){return "V";}
-                                if(cond_code=="401"||cond_code=="402"||cond_code=="403"||cond_code=="409"||cond_code=="410"){return "W";}
-                                     if(cond_code=="304"||cond_code=="313"||cond_code=="404"||cond_code=="405"||cond_code=="406"){return "X";}
-                              if(cond_code=="101"){return "Y";}
-    return ")";   
-    }    
- 

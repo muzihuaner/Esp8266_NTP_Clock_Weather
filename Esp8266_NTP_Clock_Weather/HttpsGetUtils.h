@@ -3,16 +3,16 @@
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecureBearSSL.h>
 
-
 #define DEBUG // 调试用
+
+// gzip 响应最大缓冲区大小，和风天气 API 典型响应 < 1KB，预留 2KB
+#define HTTPS_BUFFER_SIZE 2048
 
 class HttpsGetUtils {
 
-  
   public:
     HttpsGetUtils();
 
@@ -22,11 +22,7 @@ class HttpsGetUtils {
 
   private:
     static bool fetchBuffer(const char* url);
-    static const char* _host; // 服务器地址
-    
-    const int httpsPort = 2053;
-
-    static uint8_t _buffer[1280]; //gzip流最大缓冲区
+    static uint8_t _buffer[HTTPS_BUFFER_SIZE];
     static size_t _bufferSize;
 
 };
