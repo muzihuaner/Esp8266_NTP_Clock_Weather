@@ -115,10 +115,13 @@ SH1106Wire     display(I2C_DISPLAY_ADDRESS, SDA_PIN, SDC_PIN);   // or SSD1306Wi
 如果你想用其他网站的API 请自行修改HeFeng.app HeFeng.h
 
 ## 改进
+
+2025 更新日志：
 - 更改代码为和风天气V7版本 修复bug  
 - 接口默认返回的数据是Gzip压缩的，直接解析返回结果会乱码  
 - 加入Gzip处理  
 - 支持配置默认WIFI
+- 
 2026 更新日志：
 
 🔴 关键 Bug 修复
@@ -135,11 +138,7 @@ fans() 方法在头文件中声明但从未实现，会导致链接错误
 修复：删除该声明，同时清理 HeFengCurrentData 中未使用的 follower 字段
 1. #endif 语法修正 — HttpsGetUtils.cpp
 原代码 #endif DEBUG 应为 #endif，虽然编译器容忍但不符合标准
-🟠 安全改进
-1. 移除硬编码凭据 — Esp8266_NTP_Clock_Weather.ino
-原代码硬编码了 WiFi 密码  和 API Key 
-修复：DEFAULT_WIFI_SSID 和 DEFAULT_WIFI_PASSWORD 默认为空，WiFi 密码通过 AP 配网页面输入
-HEFENG_KEY 留空，需用户自行填写
+
 🟡 内存管理优化
 1. HTML 存储到 Flash — Esp8266_NTP_Clock_Weather.ino
 原代码 6 个 HTML 字符串使用 String 类存储在 RAM 中，占用约 2KB
